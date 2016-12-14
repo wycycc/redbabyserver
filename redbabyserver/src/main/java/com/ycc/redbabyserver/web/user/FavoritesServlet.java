@@ -1,0 +1,74 @@
+package com.ycc.redbabyserver.web.user;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.ycc.redbabyserver.domain.Product;
+import com.ycc.redbabyserver.factory.BasicFactory;
+import com.ycc.redbabyserver.service.UserService;
+import com.ycc.redbabyserver.utils.CommonUtil;
+import com.ycc.redbabyserver.utils.GlobalParams;
+import net.sf.json.JSONObject;
+
+public class FavoritesServlet extends HttpServlet {
+
+	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		UserService service = BasicFactory.getInstance(UserService.class);
+		String userid = request.getHeader("userid");
+		String page = request.getParameter("page");
+		String pageNum = request.getParameter("pageNum");
+		System.out.println(page+""+pageNum);
+		
+		if (userid == null || "".equals(userid.trim())) {
+			CommonUtil.renderJson(response, GlobalParams.getError("用户ID为空"));
+			return;
+		}
+		if (page == null || "".equals(page.trim())) {
+			page = "1";
+			/*CommonUtil.renderJson(response, GlobalParams.getError("查询页数为空"));
+			return;*/
+		}
+		if (pageNum == null || "".equals(pageNum.trim())) {
+			pageNum = "2";
+			/*CommonUtil.renderJson(response, GlobalParams.getError("每页显示数为空"));
+			return;*/
+		}
+		//获取数据
+		List<Product> productlist = service.getFavorites(userid, page, pageNum);
+		if (productlist == null) {
+			CommonUtil.renderJson(response, GlobalParams.getError("收藏夹空空如也"));
+		} else {
+			Map<String, Object> favorites = new HashMap<String, Object>();
+			favorites.put("response", "favorites");
+			List<Object> items = new ArrayList<Object>();
+			for (Product product : productlist) {
+				Map<String, Object> item = new HashMap<String, Object>();
+				item.put("id", product.getPro_id());
+				item.put("name", product.getName());
+				item.put("pic", product.getPic());
+				item.put("marketPrice", product.getMarketPrice());
+				item.put("price", product.getPrice());
+				items.add(item);
+			}
+			favorites.put("productlist", items);
+			favorites.put("list_count", service.getCount(userid));
+
+			JSONObject object = JSONObject.fromObject(favorites);
+			String json = object.toString();
+			CommonUtil.renderJson(response, json);
+		}
+	}
+
+	public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		doGet(request, response);
+	}
+
+}
